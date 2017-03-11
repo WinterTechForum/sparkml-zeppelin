@@ -1,0 +1,410 @@
+{
+  "paragraphs": [
+    {
+      "text": "%pyspark\n\nimport nltk\n\nfrom pyspark.ml.classification import *\nfrom pyspark.ml.feature import HashingTF\nfrom pyspark.ml.feature import IDF\nfrom pyspark.sql import Row\nfrom pyspark.sql.functions import *\n",
+      "user": "anonymous",
+      "dateUpdated": "Mar 11, 2017 4:26:24 PM",
+      "config": {
+        "colWidth": 12.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false
+        },
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": []
+      },
+      "apps": [],
+      "jobName": "paragraph_1488994966865_1254913338",
+      "id": "20170308-104246_402831701",
+      "dateCreated": "Mar 8, 2017 10:42:46 AM",
+      "dateStarted": "Mar 11, 2017 4:26:24 PM",
+      "dateFinished": "Mar 11, 2017 4:26:24 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\n# Read data\nnum_features \u003d 2048\nbase_path \u003d \"/Users/161459/Development/Personal/WTF/SparkML/data\"\npos_txt \u003d spark.read.text(\"%s/rt-polarity.pos\" % base_path)\nneg_txt \u003d spark.read.text(\"%s/rt-polarity.neg\" % base_path)\n\n# Tokenize and label\nlabeled_pos_tok \u003d spark.createDataFrame(pos_txt.rdd.map(lambda row: Row(sentence\u003drow.value,\n                                                                        tokens\u003dnltk.word_tokenize(row.value),\n                                                                        label\u003d1.0)))\nlabeled_neg_tok \u003d spark.createDataFrame(neg_txt.rdd.map(lambda row: Row(sentence\u003drow.value,\n                                                                        tokens\u003dnltk.word_tokenize(row.value),\n                                                                        label\u003d0.0)))\n\n# Split between training and test sets\nlabeled_pos_tok_splits \u003d labeled_pos_tok.randomSplit([0.1, 0.9], 42)\nlabeled_neg_tok_splits \u003d labeled_neg_tok.randomSplit([0.1, 0.9], 42)\ntraining_tok \u003d labeled_pos_tok_splits[1].union(labeled_neg_tok_splits[1])\ntest_tok \u003d labeled_pos_tok_splits[0].union(labeled_neg_tok_splits[0])\n\n# Hash TF\nhash \u003d HashingTF(numFeatures\u003dnum_features, inputCol\u003d\"tokens\", outputCol\u003d\"hash\")\ntraining_hash \u003d hash.transform(training_tok)\ntest_hash \u003d hash.transform(test_tok)\n\n# IDF\nidf \u003d IDF(inputCol\u003d\u0027hash\u0027, outputCol\u003d\u0027features\u0027).fit(training_hash.union(test_hash))\ntraining_set \u003d idf.transform(training_hash)\ntest_set \u003d idf.transform(test_hash)\n",
+      "user": "anonymous",
+      "dateUpdated": "Mar 11, 2017 4:26:24 PM",
+      "config": {
+        "colWidth": 12.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python"
+        },
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "ERROR",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 346, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 334, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 3, in \u003cmodule\u003e\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/sql/readwriter.py\", line 294, in text\n    return self._df(self._jreader.text(self._spark._sc._jvm.PythonUtils.toSeq(paths)))\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1133, in __call__\n    answer, self.gateway_client, self.target_id, self.name)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/sql/utils.py\", line 69, in deco\n    raise AnalysisException(s.split(\u0027: \u0027, 1)[1], stackTrace)\nAnalysisException: u\u0027Path does not exist: file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.pos;\u0027\n\n"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1489010949572_-1500999376",
+      "id": "20170308-150909_283511717",
+      "dateCreated": "Mar 8, 2017 3:09:09 PM",
+      "dateStarted": "Mar 11, 2017 4:26:24 PM",
+      "dateFinished": "Mar 11, 2017 4:26:24 PM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\ndef train_and_evaluate(estimator, params\u003dNone, training_set\u003dtraining_set, test_set\u003dtest_set):\n    #print(\"Parameters:\\n\" + estimator.explainParams() + \"\\n\")\n    model \u003d estimator.fit(training_set, params)\n    \n    pred \u003d model.transform(test_set)\n    result \u003d pred.select(avg(abs(pred.label - pred.prediction)).alias(\u0027error\u0027)).head()\n\n    return result.error,model\n",
+      "user": "anonymous",
+      "dateUpdated": "Mar 11, 2017 4:26:24 PM",
+      "config": {
+        "colWidth": 12.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python"
+        },
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": []
+      },
+      "apps": [],
+      "jobName": "paragraph_1489158884166_-2078128829",
+      "id": "20170310-081444_1554747331",
+      "dateCreated": "Mar 10, 2017 8:14:44 AM",
+      "dateStarted": "Mar 11, 2017 4:26:24 PM",
+      "dateFinished": "Mar 11, 2017 4:26:24 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\nlr \u003d LogisticRegression(maxIter\u003d10, regParam\u003d0.01)\n\nlr_error1,lr_model1 \u003d train_and_evaluate(lr)\nprint(\u0027Logistic Regression (1) error: %s\u0027 % lr_error1)\n\n# We may alternatively specify parameters using a Python dictionary as a paramMap\nparamMap \u003d {lr.maxIter: 20}\nparamMap[lr.maxIter] \u003d 30  # Specify 1 Param, overwriting the original maxIter.\nparamMap.update({lr.regParam: 0.1, lr.threshold: 0.55})  # Specify multiple Params.\n\n# You can combine paramMaps, which are python dictionaries.\nparamMap2 \u003d {lr.probabilityCol: \"myProbability\"}  # Change output column name\nparamMapCombined \u003d paramMap.copy()\nparamMapCombined.update(paramMap2)\n\nlr_error2,lr_model2 \u003d train_and_evaluate(lr, paramMapCombined)\nprint(\u0027Logistic Regression (2) error: %s\u0027 % lr_error2)\n",
+      "user": "anonymous",
+      "dateUpdated": "Mar 11, 2017 4:26:24 PM",
+      "config": {
+        "colWidth": 12.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python"
+        },
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "ERROR",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 346, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 334, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 2, in \u003cmodule\u003e\n  File \"\u003cstdin\u003e\", line 2, in train_and_evaluate\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/base.py\", line 64, in fit\n    return self._fit(dataset)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/wrapper.py\", line 236, in _fit\n    java_model \u003d self._fit_java(dataset)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/wrapper.py\", line 233, in _fit_java\n    return self._java_obj.fit(dataset._jdf)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1133, in __call__\n    answer, self.gateway_client, self.target_id, self.name)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/sql/utils.py\", line 63, in deco\n    return f(*a, **kw)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/protocol.py\", line 319, in get_return_value\n    format(target_id, \".\", name), value)\nPy4JJavaError: An error occurred while calling o3622.fit.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 2387.0 failed 1 times, most recent failure: Lost task 1.0 in stage 2387.0 (TID 4745, localhost, executor driver): java.io.FileNotFoundException: File file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.neg does not exist\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running \u0027REFRESH TABLE tableName\u0027 command in SQL or by recreating the Dataset/DataFrame involved.\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:157)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:102)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIterator.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenExec$$anonfun$8$$anon$1.hasNext(WholeStageCodegenExec.scala:377)\n\tat scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:408)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.hasNext(SerDeUtil.scala:117)\n\tat scala.collection.Iterator$class.foreach(Iterator.scala:893)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.foreach(SerDeUtil.scala:112)\n\tat org.apache.spark.api.python.PythonRDD$.writeIteratorToStream(PythonRDD.scala:504)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread$$anonfun$run$3.apply(PythonRDD.scala:328)\n\tat org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1951)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread.run(PythonRDD.scala:269)\n\nDriver stacktrace:\n\tat org.apache.spark.scheduler.DAGScheduler.org$apache$spark$scheduler$DAGScheduler$$failJobAndIndependentStages(DAGScheduler.scala:1435)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1423)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1422)\n\tat scala.collection.mutable.ResizableArray$class.foreach(ResizableArray.scala:59)\n\tat scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:1422)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:802)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:802)\n\tat scala.Option.foreach(Option.scala:257)\n\tat org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:802)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:1650)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1605)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1594)\n\tat org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.runJob(DAGScheduler.scala:628)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1918)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1981)\n\tat org.apache.spark.rdd.RDD$$anonfun$reduce$1.apply(RDD.scala:1025)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:151)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:112)\n\tat org.apache.spark.rdd.RDD.withScope(RDD.scala:362)\n\tat org.apache.spark.rdd.RDD.reduce(RDD.scala:1007)\n\tat org.apache.spark.rdd.RDD$$anonfun$treeAggregate$1.apply(RDD.scala:1150)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:151)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:112)\n\tat org.apache.spark.rdd.RDD.withScope(RDD.scala:362)\n\tat org.apache.spark.rdd.RDD.treeAggregate(RDD.scala:1127)\n\tat org.apache.spark.ml.classification.LogisticRegression.train(LogisticRegression.scala:352)\n\tat org.apache.spark.ml.classification.LogisticRegression.train(LogisticRegression.scala:322)\n\tat org.apache.spark.ml.classification.LogisticRegression.train(LogisticRegression.scala:193)\n\tat org.apache.spark.ml.Predictor.fit(Predictor.scala:96)\n\tat org.apache.spark.ml.Predictor.fit(Predictor.scala:72)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\n\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.lang.reflect.Method.invoke(Method.java:498)\n\tat py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)\n\tat py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357)\n\tat py4j.Gateway.invoke(Gateway.java:280)\n\tat py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:79)\n\tat py4j.GatewayConnection.run(GatewayConnection.java:214)\n\tat java.lang.Thread.run(Thread.java:745)\nCaused by: java.io.FileNotFoundException: File file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.neg does not exist\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running \u0027REFRESH TABLE tableName\u0027 command in SQL or by recreating the Dataset/DataFrame involved.\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:157)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:102)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIterator.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenExec$$anonfun$8$$anon$1.hasNext(WholeStageCodegenExec.scala:377)\n\tat scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:408)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.hasNext(SerDeUtil.scala:117)\n\tat scala.collection.Iterator$class.foreach(Iterator.scala:893)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.foreach(SerDeUtil.scala:112)\n\tat org.apache.spark.api.python.PythonRDD$.writeIteratorToStream(PythonRDD.scala:504)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread$$anonfun$run$3.apply(PythonRDD.scala:328)\n\tat org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1951)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread.run(PythonRDD.scala:269)\n\n\n"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1489005745652_1589442828",
+      "id": "20170308-134225_2070216974",
+      "dateCreated": "Mar 8, 2017 1:42:25 PM",
+      "dateStarted": "Mar 11, 2017 4:26:24 PM",
+      "dateFinished": "Mar 11, 2017 4:26:24 PM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\nnb \u003d NaiveBayes()\nnb_error,nb_model \u003d train_and_evaluate(nb)\n\nprint(\u0027Naive Bayes error: %s\u0027 % nb_error)\n",
+      "user": "anonymous",
+      "dateUpdated": "Mar 11, 2017 4:26:24 PM",
+      "config": {
+        "colWidth": 12.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python"
+        },
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "ERROR",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 346, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 334, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 2, in \u003cmodule\u003e\n  File \"\u003cstdin\u003e\", line 2, in train_and_evaluate\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/base.py\", line 64, in fit\n    return self._fit(dataset)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/wrapper.py\", line 236, in _fit\n    java_model \u003d self._fit_java(dataset)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/wrapper.py\", line 233, in _fit_java\n    return self._java_obj.fit(dataset._jdf)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1133, in __call__\n    answer, self.gateway_client, self.target_id, self.name)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/sql/utils.py\", line 63, in deco\n    return f(*a, **kw)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/protocol.py\", line 319, in get_return_value\n    format(target_id, \".\", name), value)\nPy4JJavaError: An error occurred while calling o3711.fit.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 2388.0 failed 1 times, most recent failure: Lost task 0.0 in stage 2388.0 (TID 4746, localhost, executor driver): java.io.FileNotFoundException: File file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.pos does not exist\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running \u0027REFRESH TABLE tableName\u0027 command in SQL or by recreating the Dataset/DataFrame involved.\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:157)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:102)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIterator.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenExec$$anonfun$8$$anon$1.hasNext(WholeStageCodegenExec.scala:377)\n\tat scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:408)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.hasNext(SerDeUtil.scala:117)\n\tat scala.collection.Iterator$class.foreach(Iterator.scala:893)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.foreach(SerDeUtil.scala:112)\n\tat org.apache.spark.api.python.PythonRDD$.writeIteratorToStream(PythonRDD.scala:504)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread$$anonfun$run$3.apply(PythonRDD.scala:328)\n\tat org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1951)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread.run(PythonRDD.scala:269)\n\nDriver stacktrace:\n\tat org.apache.spark.scheduler.DAGScheduler.org$apache$spark$scheduler$DAGScheduler$$failJobAndIndependentStages(DAGScheduler.scala:1435)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1423)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1422)\n\tat scala.collection.mutable.ResizableArray$class.foreach(ResizableArray.scala:59)\n\tat scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:1422)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:802)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:802)\n\tat scala.Option.foreach(Option.scala:257)\n\tat org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:802)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:1650)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1605)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1594)\n\tat org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.runJob(DAGScheduler.scala:628)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1918)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1931)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1944)\n\tat org.apache.spark.sql.execution.SparkPlan.executeTake(SparkPlan.scala:333)\n\tat org.apache.spark.sql.execution.CollectLimitExec.executeCollect(limit.scala:38)\n\tat org.apache.spark.sql.Dataset$$anonfun$org$apache$spark$sql$Dataset$$execute$1$1.apply(Dataset.scala:2371)\n\tat org.apache.spark.sql.execution.SQLExecution$.withNewExecutionId(SQLExecution.scala:57)\n\tat org.apache.spark.sql.Dataset.withNewExecutionId(Dataset.scala:2765)\n\tat org.apache.spark.sql.Dataset.org$apache$spark$sql$Dataset$$execute$1(Dataset.scala:2370)\n\tat org.apache.spark.sql.Dataset.org$apache$spark$sql$Dataset$$collect(Dataset.scala:2377)\n\tat org.apache.spark.sql.Dataset$$anonfun$head$1.apply(Dataset.scala:2113)\n\tat org.apache.spark.sql.Dataset$$anonfun$head$1.apply(Dataset.scala:2112)\n\tat org.apache.spark.sql.Dataset.withTypedCallback(Dataset.scala:2795)\n\tat org.apache.spark.sql.Dataset.head(Dataset.scala:2112)\n\tat org.apache.spark.sql.Dataset.take(Dataset.scala:2327)\n\tat org.apache.spark.ml.classification.Classifier.getNumClasses(Classifier.scala:111)\n\tat org.apache.spark.ml.classification.NaiveBayes.trainWithLabelCheck(NaiveBayes.scala:131)\n\tat org.apache.spark.ml.classification.NaiveBayes.train(NaiveBayes.scala:118)\n\tat org.apache.spark.ml.classification.NaiveBayes.train(NaiveBayes.scala:78)\n\tat org.apache.spark.ml.Predictor.fit(Predictor.scala:96)\n\tat org.apache.spark.ml.Predictor.fit(Predictor.scala:72)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\n\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.lang.reflect.Method.invoke(Method.java:498)\n\tat py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)\n\tat py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357)\n\tat py4j.Gateway.invoke(Gateway.java:280)\n\tat py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:79)\n\tat py4j.GatewayConnection.run(GatewayConnection.java:214)\n\tat java.lang.Thread.run(Thread.java:745)\nCaused by: java.io.FileNotFoundException: File file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.pos does not exist\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running \u0027REFRESH TABLE tableName\u0027 command in SQL or by recreating the Dataset/DataFrame involved.\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:157)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:102)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIterator.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenExec$$anonfun$8$$anon$1.hasNext(WholeStageCodegenExec.scala:377)\n\tat scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:408)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.hasNext(SerDeUtil.scala:117)\n\tat scala.collection.Iterator$class.foreach(Iterator.scala:893)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.foreach(SerDeUtil.scala:112)\n\tat org.apache.spark.api.python.PythonRDD$.writeIteratorToStream(PythonRDD.scala:504)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread$$anonfun$run$3.apply(PythonRDD.scala:328)\n\tat org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1951)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread.run(PythonRDD.scala:269)\n\n\n"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1489065032155_1634676285",
+      "id": "20170309-061032_938715003",
+      "dateCreated": "Mar 9, 2017 6:10:32 AM",
+      "dateStarted": "Mar 11, 2017 4:26:24 PM",
+      "dateFinished": "Mar 11, 2017 4:26:24 PM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\ndt \u003d DecisionTreeClassifier()\ndt_error,dt_model \u003d train_and_evaluate(dt)\n\nprint(\u0027Decision Tree error: %s\u0027 % dt_error)\n",
+      "user": "anonymous",
+      "dateUpdated": "Mar 11, 2017 4:26:24 PM",
+      "config": {
+        "colWidth": 12.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python"
+        },
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "ERROR",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 346, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 334, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 2, in \u003cmodule\u003e\n  File \"\u003cstdin\u003e\", line 2, in train_and_evaluate\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/base.py\", line 64, in fit\n    return self._fit(dataset)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/wrapper.py\", line 236, in _fit\n    java_model \u003d self._fit_java(dataset)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/wrapper.py\", line 233, in _fit_java\n    return self._java_obj.fit(dataset._jdf)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1133, in __call__\n    answer, self.gateway_client, self.target_id, self.name)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/sql/utils.py\", line 63, in deco\n    return f(*a, **kw)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/protocol.py\", line 319, in get_return_value\n    format(target_id, \".\", name), value)\nPy4JJavaError: An error occurred while calling o3783.fit.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 2390.0 failed 1 times, most recent failure: Lost task 0.0 in stage 2390.0 (TID 4748, localhost, executor driver): java.io.FileNotFoundException: File file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.pos does not exist\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running \u0027REFRESH TABLE tableName\u0027 command in SQL or by recreating the Dataset/DataFrame involved.\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:157)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:102)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIterator.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenExec$$anonfun$8$$anon$1.hasNext(WholeStageCodegenExec.scala:377)\n\tat scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:408)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.hasNext(SerDeUtil.scala:117)\n\tat scala.collection.Iterator$class.foreach(Iterator.scala:893)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.foreach(SerDeUtil.scala:112)\n\tat org.apache.spark.api.python.PythonRDD$.writeIteratorToStream(PythonRDD.scala:504)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread$$anonfun$run$3.apply(PythonRDD.scala:328)\n\tat org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1951)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread.run(PythonRDD.scala:269)\n\nDriver stacktrace:\n\tat org.apache.spark.scheduler.DAGScheduler.org$apache$spark$scheduler$DAGScheduler$$failJobAndIndependentStages(DAGScheduler.scala:1435)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1423)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1422)\n\tat scala.collection.mutable.ResizableArray$class.foreach(ResizableArray.scala:59)\n\tat scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:1422)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:802)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:802)\n\tat scala.Option.foreach(Option.scala:257)\n\tat org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:802)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:1650)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1605)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1594)\n\tat org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.runJob(DAGScheduler.scala:628)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1918)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1931)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1944)\n\tat org.apache.spark.sql.execution.SparkPlan.executeTake(SparkPlan.scala:333)\n\tat org.apache.spark.sql.execution.CollectLimitExec.executeCollect(limit.scala:38)\n\tat org.apache.spark.sql.Dataset$$anonfun$org$apache$spark$sql$Dataset$$execute$1$1.apply(Dataset.scala:2371)\n\tat org.apache.spark.sql.execution.SQLExecution$.withNewExecutionId(SQLExecution.scala:57)\n\tat org.apache.spark.sql.Dataset.withNewExecutionId(Dataset.scala:2765)\n\tat org.apache.spark.sql.Dataset.org$apache$spark$sql$Dataset$$execute$1(Dataset.scala:2370)\n\tat org.apache.spark.sql.Dataset.org$apache$spark$sql$Dataset$$collect(Dataset.scala:2377)\n\tat org.apache.spark.sql.Dataset$$anonfun$head$1.apply(Dataset.scala:2113)\n\tat org.apache.spark.sql.Dataset$$anonfun$head$1.apply(Dataset.scala:2112)\n\tat org.apache.spark.sql.Dataset.withTypedCallback(Dataset.scala:2795)\n\tat org.apache.spark.sql.Dataset.head(Dataset.scala:2112)\n\tat org.apache.spark.sql.Dataset.take(Dataset.scala:2327)\n\tat org.apache.spark.ml.classification.Classifier.getNumClasses(Classifier.scala:111)\n\tat org.apache.spark.ml.classification.DecisionTreeClassifier.train(DecisionTreeClassifier.scala:102)\n\tat org.apache.spark.ml.classification.DecisionTreeClassifier.train(DecisionTreeClassifier.scala:45)\n\tat org.apache.spark.ml.Predictor.fit(Predictor.scala:96)\n\tat org.apache.spark.ml.Predictor.fit(Predictor.scala:72)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\n\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.lang.reflect.Method.invoke(Method.java:498)\n\tat py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)\n\tat py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357)\n\tat py4j.Gateway.invoke(Gateway.java:280)\n\tat py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:79)\n\tat py4j.GatewayConnection.run(GatewayConnection.java:214)\n\tat java.lang.Thread.run(Thread.java:745)\nCaused by: java.io.FileNotFoundException: File file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.pos does not exist\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running \u0027REFRESH TABLE tableName\u0027 command in SQL or by recreating the Dataset/DataFrame involved.\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:157)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:102)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIterator.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenExec$$anonfun$8$$anon$1.hasNext(WholeStageCodegenExec.scala:377)\n\tat scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:408)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.hasNext(SerDeUtil.scala:117)\n\tat scala.collection.Iterator$class.foreach(Iterator.scala:893)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.foreach(SerDeUtil.scala:112)\n\tat org.apache.spark.api.python.PythonRDD$.writeIteratorToStream(PythonRDD.scala:504)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread$$anonfun$run$3.apply(PythonRDD.scala:328)\n\tat org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1951)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread.run(PythonRDD.scala:269)\n\n\n"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1489250046871_-1906056056",
+      "id": "20170311-093406_636930458",
+      "dateCreated": "Mar 11, 2017 9:34:06 AM",
+      "dateStarted": "Mar 11, 2017 4:26:24 PM",
+      "dateFinished": "Mar 11, 2017 4:26:25 PM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\nrf \u003d RandomForestClassifier()\nrf_error,rf_model \u003d train_and_evaluate(rf)\n\nprint(\u0027Random Forest error: %s\u0027 % rf_error)\n",
+      "user": "anonymous",
+      "dateUpdated": "Mar 11, 2017 4:26:24 PM",
+      "config": {
+        "colWidth": 12.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python"
+        },
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "ERROR",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 346, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 334, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 2, in \u003cmodule\u003e\n  File \"\u003cstdin\u003e\", line 2, in train_and_evaluate\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/base.py\", line 64, in fit\n    return self._fit(dataset)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/wrapper.py\", line 236, in _fit\n    java_model \u003d self._fit_java(dataset)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/wrapper.py\", line 233, in _fit_java\n    return self._java_obj.fit(dataset._jdf)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1133, in __call__\n    answer, self.gateway_client, self.target_id, self.name)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/sql/utils.py\", line 63, in deco\n    return f(*a, **kw)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/protocol.py\", line 319, in get_return_value\n    format(target_id, \".\", name), value)\nPy4JJavaError: An error occurred while calling o3875.fit.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 2392.0 failed 1 times, most recent failure: Lost task 1.0 in stage 2392.0 (TID 4751, localhost, executor driver): java.io.FileNotFoundException: File file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.neg does not exist\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running \u0027REFRESH TABLE tableName\u0027 command in SQL or by recreating the Dataset/DataFrame involved.\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:157)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:102)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIterator.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenExec$$anonfun$8$$anon$1.hasNext(WholeStageCodegenExec.scala:377)\n\tat scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:408)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.hasNext(SerDeUtil.scala:117)\n\tat scala.collection.Iterator$class.foreach(Iterator.scala:893)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.foreach(SerDeUtil.scala:112)\n\tat org.apache.spark.api.python.PythonRDD$.writeIteratorToStream(PythonRDD.scala:504)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread$$anonfun$run$3.apply(PythonRDD.scala:328)\n\tat org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1951)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread.run(PythonRDD.scala:269)\n\nDriver stacktrace:\n\tat org.apache.spark.scheduler.DAGScheduler.org$apache$spark$scheduler$DAGScheduler$$failJobAndIndependentStages(DAGScheduler.scala:1435)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1423)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1422)\n\tat scala.collection.mutable.ResizableArray$class.foreach(ResizableArray.scala:59)\n\tat scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:1422)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:802)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:802)\n\tat scala.Option.foreach(Option.scala:257)\n\tat org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:802)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:1650)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1605)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1594)\n\tat org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.runJob(DAGScheduler.scala:628)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1918)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1931)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1944)\n\tat org.apache.spark.sql.execution.SparkPlan.executeTake(SparkPlan.scala:333)\n\tat org.apache.spark.sql.execution.CollectLimitExec.executeCollect(limit.scala:38)\n\tat org.apache.spark.sql.Dataset$$anonfun$org$apache$spark$sql$Dataset$$execute$1$1.apply(Dataset.scala:2371)\n\tat org.apache.spark.sql.execution.SQLExecution$.withNewExecutionId(SQLExecution.scala:57)\n\tat org.apache.spark.sql.Dataset.withNewExecutionId(Dataset.scala:2765)\n\tat org.apache.spark.sql.Dataset.org$apache$spark$sql$Dataset$$execute$1(Dataset.scala:2370)\n\tat org.apache.spark.sql.Dataset.org$apache$spark$sql$Dataset$$collect(Dataset.scala:2377)\n\tat org.apache.spark.sql.Dataset$$anonfun$head$1.apply(Dataset.scala:2113)\n\tat org.apache.spark.sql.Dataset$$anonfun$head$1.apply(Dataset.scala:2112)\n\tat org.apache.spark.sql.Dataset.withTypedCallback(Dataset.scala:2795)\n\tat org.apache.spark.sql.Dataset.head(Dataset.scala:2112)\n\tat org.apache.spark.sql.Dataset.take(Dataset.scala:2327)\n\tat org.apache.spark.ml.classification.Classifier.getNumClasses(Classifier.scala:111)\n\tat org.apache.spark.ml.classification.RandomForestClassifier.train(RandomForestClassifier.scala:121)\n\tat org.apache.spark.ml.classification.RandomForestClassifier.train(RandomForestClassifier.scala:45)\n\tat org.apache.spark.ml.Predictor.fit(Predictor.scala:96)\n\tat org.apache.spark.ml.Predictor.fit(Predictor.scala:72)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\n\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.lang.reflect.Method.invoke(Method.java:498)\n\tat py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)\n\tat py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357)\n\tat py4j.Gateway.invoke(Gateway.java:280)\n\tat py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:79)\n\tat py4j.GatewayConnection.run(GatewayConnection.java:214)\n\tat java.lang.Thread.run(Thread.java:745)\nCaused by: java.io.FileNotFoundException: File file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.neg does not exist\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running \u0027REFRESH TABLE tableName\u0027 command in SQL or by recreating the Dataset/DataFrame involved.\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:157)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:102)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIterator.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenExec$$anonfun$8$$anon$1.hasNext(WholeStageCodegenExec.scala:377)\n\tat scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:408)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.hasNext(SerDeUtil.scala:117)\n\tat scala.collection.Iterator$class.foreach(Iterator.scala:893)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.foreach(SerDeUtil.scala:112)\n\tat org.apache.spark.api.python.PythonRDD$.writeIteratorToStream(PythonRDD.scala:504)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread$$anonfun$run$3.apply(PythonRDD.scala:328)\n\tat org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1951)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread.run(PythonRDD.scala:269)\n\n\n"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1489065413637_-497048804",
+      "id": "20170309-061653_2033208796",
+      "dateCreated": "Mar 9, 2017 6:16:53 AM",
+      "dateStarted": "Mar 11, 2017 4:26:25 PM",
+      "dateFinished": "Mar 11, 2017 4:26:25 PM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\ngbt \u003d GBTClassifier()\ngbt_error,gbt_model \u003d train_and_evaluate(gbt)\n\nprint(\u0027Gradient Boosted Tree error: %s\u0027 % gbt_error)\n",
+      "user": "anonymous",
+      "dateUpdated": "Mar 11, 2017 4:26:24 PM",
+      "config": {
+        "colWidth": 12.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python",
+          "editOnDblClick": false
+        },
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "ERROR",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 346, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 334, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 2, in \u003cmodule\u003e\n  File \"\u003cstdin\u003e\", line 2, in train_and_evaluate\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/base.py\", line 64, in fit\n    return self._fit(dataset)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/wrapper.py\", line 236, in _fit\n    java_model \u003d self._fit_java(dataset)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/wrapper.py\", line 233, in _fit_java\n    return self._java_obj.fit(dataset._jdf)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1133, in __call__\n    answer, self.gateway_client, self.target_id, self.name)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/sql/utils.py\", line 63, in deco\n    return f(*a, **kw)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/protocol.py\", line 319, in get_return_value\n    format(target_id, \".\", name), value)\nPy4JJavaError: An error occurred while calling o3976.fit.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 2394.0 failed 1 times, most recent failure: Lost task 0.0 in stage 2394.0 (TID 4752, localhost, executor driver): java.io.FileNotFoundException: File file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.pos does not exist\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running \u0027REFRESH TABLE tableName\u0027 command in SQL or by recreating the Dataset/DataFrame involved.\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:157)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:102)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIterator.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenExec$$anonfun$8$$anon$1.hasNext(WholeStageCodegenExec.scala:377)\n\tat scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:408)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.hasNext(SerDeUtil.scala:117)\n\tat scala.collection.Iterator$class.foreach(Iterator.scala:893)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.foreach(SerDeUtil.scala:112)\n\tat org.apache.spark.api.python.PythonRDD$.writeIteratorToStream(PythonRDD.scala:504)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread$$anonfun$run$3.apply(PythonRDD.scala:328)\n\tat org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1951)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread.run(PythonRDD.scala:269)\n\nDriver stacktrace:\n\tat org.apache.spark.scheduler.DAGScheduler.org$apache$spark$scheduler$DAGScheduler$$failJobAndIndependentStages(DAGScheduler.scala:1435)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1423)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1422)\n\tat scala.collection.mutable.ResizableArray$class.foreach(ResizableArray.scala:59)\n\tat scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:1422)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:802)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:802)\n\tat scala.Option.foreach(Option.scala:257)\n\tat org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:802)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:1650)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1605)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1594)\n\tat org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.runJob(DAGScheduler.scala:628)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1918)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1931)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1944)\n\tat org.apache.spark.rdd.RDD$$anonfun$take$1.apply(RDD.scala:1353)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:151)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:112)\n\tat org.apache.spark.rdd.RDD.withScope(RDD.scala:362)\n\tat org.apache.spark.rdd.RDD.take(RDD.scala:1326)\n\tat org.apache.spark.rdd.RDD$$anonfun$first$1.apply(RDD.scala:1367)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:151)\n\tat org.apache.spark.rdd.RDDOperationScope$.withScope(RDDOperationScope.scala:112)\n\tat org.apache.spark.rdd.RDD.withScope(RDD.scala:362)\n\tat org.apache.spark.rdd.RDD.first(RDD.scala:1366)\n\tat org.apache.spark.ml.classification.GBTClassifier.train(GBTClassifier.scala:159)\n\tat org.apache.spark.ml.classification.GBTClassifier.train(GBTClassifier.scala:60)\n\tat org.apache.spark.ml.Predictor.fit(Predictor.scala:96)\n\tat org.apache.spark.ml.Predictor.fit(Predictor.scala:72)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\tat sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)\n\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.lang.reflect.Method.invoke(Method.java:498)\n\tat py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)\n\tat py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357)\n\tat py4j.Gateway.invoke(Gateway.java:280)\n\tat py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:79)\n\tat py4j.GatewayConnection.run(GatewayConnection.java:214)\n\tat java.lang.Thread.run(Thread.java:745)\nCaused by: java.io.FileNotFoundException: File file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.pos does not exist\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running \u0027REFRESH TABLE tableName\u0027 command in SQL or by recreating the Dataset/DataFrame involved.\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:157)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:102)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIterator.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenExec$$anonfun$8$$anon$1.hasNext(WholeStageCodegenExec.scala:377)\n\tat scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:408)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.hasNext(SerDeUtil.scala:117)\n\tat scala.collection.Iterator$class.foreach(Iterator.scala:893)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.foreach(SerDeUtil.scala:112)\n\tat org.apache.spark.api.python.PythonRDD$.writeIteratorToStream(PythonRDD.scala:504)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread$$anonfun$run$3.apply(PythonRDD.scala:328)\n\tat org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1951)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread.run(PythonRDD.scala:269)\n\n\n"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1489170422948_1218387933",
+      "id": "20170310-112702_886181528",
+      "dateCreated": "Mar 10, 2017 11:27:02 AM",
+      "dateStarted": "Mar 11, 2017 4:26:25 PM",
+      "dateFinished": "Mar 11, 2017 4:26:25 PM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\nnn \u003d MultilayerPerceptronClassifier(maxIter\u003d10, layers\u003d[num_features, 8, 2], seed\u003d42)\nnn_error,nn_model \u003d train_and_evaluate(nn)\n\nprint(\u0027Neural Network error: %s\u0027 % nn_error)\n",
+      "user": "anonymous",
+      "dateUpdated": "Mar 11, 2017 4:26:24 PM",
+      "config": {
+        "colWidth": 12.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python"
+        },
+        "editorMode": "ace/mode/python"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "ERROR",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 346, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 334, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 2, in \u003cmodule\u003e\n  File \"\u003cstdin\u003e\", line 2, in train_and_evaluate\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/base.py\", line 64, in fit\n    return self._fit(dataset)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/wrapper.py\", line 236, in _fit\n    java_model \u003d self._fit_java(dataset)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/ml/wrapper.py\", line 233, in _fit_java\n    return self._java_obj.fit(dataset._jdf)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/java_gateway.py\", line 1133, in __call__\n    answer, self.gateway_client, self.target_id, self.name)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/pyspark.zip/pyspark/sql/utils.py\", line 63, in deco\n    return f(*a, **kw)\n  File \"/usr/local/share/java/zeppelin-0.7.0-bin-all/interpreter/spark/pyspark/py4j-0.10.4-src.zip/py4j/protocol.py\", line 319, in get_return_value\n    format(target_id, \".\", name), value)\nPy4JJavaError: An error occurred while calling o4068.fit.\n: org.apache.spark.SparkException: Job aborted due to stage failure: Task 1 in stage 2395.0 failed 1 times, most recent failure: Lost task 1.0 in stage 2395.0 (TID 4754, localhost, executor driver): java.io.FileNotFoundException: File file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.neg does not exist\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running \u0027REFRESH TABLE tableName\u0027 command in SQL or by recreating the Dataset/DataFrame involved.\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:157)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:102)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIterator.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenExec$$anonfun$8$$anon$1.hasNext(WholeStageCodegenExec.scala:377)\n\tat scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:408)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.hasNext(SerDeUtil.scala:117)\n\tat scala.collection.Iterator$class.foreach(Iterator.scala:893)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.foreach(SerDeUtil.scala:112)\n\tat org.apache.spark.api.python.PythonRDD$.writeIteratorToStream(PythonRDD.scala:504)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread$$anonfun$run$3.apply(PythonRDD.scala:328)\n\tat org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1951)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread.run(PythonRDD.scala:269)\n\nDriver stacktrace:\n\tat org.apache.spark.scheduler.DAGScheduler.org$apache$spark$scheduler$DAGScheduler$$failJobAndIndependentStages(DAGScheduler.scala:1435)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1423)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1422)\n\tat scala.collection.mutable.ResizableArray$class.foreach(ResizableArray.scala:59)\n\tat scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:1422)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:802)\n\tat org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:802)\n\tat scala.Option.foreach(Option.scala:257)\n\tat org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:802)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.doOnReceive(DAGScheduler.scala:1650)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1605)\n\tat org.apache.spark.scheduler.DAGSchedulerEventProcessLoop.onReceive(DAGScheduler.scala:1594)\n\tat org.apache.spark.util.EventLoop$$anon$1.run(EventLoop.scala:48)\n\tat org.apache.spark.scheduler.DAGScheduler.runJob(DAGScheduler.scala:628)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1918)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1931)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1944)\n\tat org.apache.spark.SparkContext.runJob(SparkContext.scala:1958)\n\tat org.apache.spark.rdd.RDD.count(RDD.scala:1157)\n\tat org.apache.spark.mllib.optimization.LBFGS$.runLBFGS(LBFGS.scala:195)\n\tat org.apache.spark.mllib.optimization.LBFGS.optimize(LBFGS.scala:142)\n\tat org.apache.spark.ml.ann.FeedForwardTrainer.train(Layer.scala:817)\n\tat org.apache.spark.ml.classification.MultilayerPerceptronClassifier.train(MultilayerPerceptronClassifier.scala:260)\n\tat org.apache.spark.ml.classification.MultilayerPerceptronClassifier.train(MultilayerPerceptronClassifier.scala:145)\n\tat org.apache.spark.ml.Predictor.fit(Predictor.scala:96)\n\tat org.apache.spark.ml.Predictor.fit(Predictor.scala:72)\n\tat sun.reflect.GeneratedMethodAccessor308.invoke(Unknown Source)\n\tat sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.lang.reflect.Method.invoke(Method.java:498)\n\tat py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)\n\tat py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357)\n\tat py4j.Gateway.invoke(Gateway.java:280)\n\tat py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)\n\tat py4j.commands.CallCommand.execute(CallCommand.java:79)\n\tat py4j.GatewayConnection.run(GatewayConnection.java:214)\n\tat java.lang.Thread.run(Thread.java:745)\nCaused by: java.io.FileNotFoundException: File file:/Users/161459/Development/Personal/WTF/SparkML/data/rt-polarity.neg does not exist\nIt is possible the underlying files have been updated. You can explicitly invalidate the cache in Spark by running \u0027REFRESH TABLE tableName\u0027 command in SQL or by recreating the Dataset/DataFrame involved.\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.nextIterator(FileScanRDD.scala:157)\n\tat org.apache.spark.sql.execution.datasources.FileScanRDD$$anon$1.hasNext(FileScanRDD.scala:102)\n\tat org.apache.spark.sql.catalyst.expressions.GeneratedClass$GeneratedIterator.processNext(Unknown Source)\n\tat org.apache.spark.sql.execution.BufferedRowIterator.hasNext(BufferedRowIterator.java:43)\n\tat org.apache.spark.sql.execution.WholeStageCodegenExec$$anonfun$8$$anon$1.hasNext(WholeStageCodegenExec.scala:377)\n\tat scala.collection.Iterator$$anon$11.hasNext(Iterator.scala:408)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.hasNext(SerDeUtil.scala:117)\n\tat scala.collection.Iterator$class.foreach(Iterator.scala:893)\n\tat org.apache.spark.api.python.SerDeUtil$AutoBatchedPickler.foreach(SerDeUtil.scala:112)\n\tat org.apache.spark.api.python.PythonRDD$.writeIteratorToStream(PythonRDD.scala:504)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread$$anonfun$run$3.apply(PythonRDD.scala:328)\n\tat org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1951)\n\tat org.apache.spark.api.python.PythonRunner$WriterThread.run(PythonRDD.scala:269)\n\n\n"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1489250087044_-393546833",
+      "id": "20170311-093447_1055211756",
+      "dateCreated": "Mar 11, 2017 9:34:47 AM",
+      "dateStarted": "Mar 11, 2017 4:26:25 PM",
+      "dateFinished": "Mar 11, 2017 4:26:25 PM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "%pyspark\n\nsentence \u003d z.input(\u0027Sentence\u0027, \u0027winter tech forum\u0027).lower()\n# Prepare test data\ntest_toks \u003d spark.createDataFrame([(sentence, nltk.word_tokenize(sentence))], [\u0027sentence\u0027, \u0027tokens\u0027])\ntest \u003d idf.transform(hash.transform(test_toks))\n\n# Make predictions on test data using the Transformer.transform() method.\n# LogisticRegression.transform will only use the \u0027features\u0027 column.\n# Note that model2.transform() outputs a \"myProbability\" column instead of the usual\n# \u0027probability\u0027 column since we renamed the lr.probabilityCol parameter previously.\nprediction \u003d nn_model.transform(test)\nresult \u003d prediction.select(\u0027sentence\u0027, \u0027prediction\u0027).collect()\n\nfor row in result:\n    print(\u0027positive\u0027 if row.prediction \u003d\u003d 1.0 else \u0027negative\u0027)\n          ",
+      "user": "anonymous",
+      "dateUpdated": "Mar 11, 2017 4:26:24 PM",
+      "config": {
+        "colWidth": 12.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "python"
+        },
+        "editorMode": "ace/mode/python",
+        "editorHide": false,
+        "tableHide": false
+      },
+      "settings": {
+        "params": {
+          "Sentence": "the winter tech forum is the worst"
+        },
+        "forms": {
+          "Sentence": {
+            "name": "Sentence",
+            "displayName": "Sentence",
+            "type": "input",
+            "defaultValue": "winter tech forum",
+            "hidden": false
+          }
+        }
+      },
+      "results": {
+        "code": "ERROR",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 346, in \u003cmodule\u003e\n    raise Exception(traceback.format_exc())\nException: Traceback (most recent call last):\n  File \"/var/folders/zz/zyxvpxvq6csfxvn_n0000000000000/T/zeppelin_pyspark-7600619246497938879.py\", line 334, in \u003cmodule\u003e\n    exec(code)\n  File \"\u003cstdin\u003e\", line 3, in \u003cmodule\u003e\nAttributeError: \u0027function\u0027 object has no attribute \u0027transform\u0027\n\n"
+          }
+        ]
+      },
+      "apps": [],
+      "jobName": "paragraph_1489012005861_367107240",
+      "id": "20170308-152645_2111847735",
+      "dateCreated": "Mar 8, 2017 3:26:45 PM",
+      "dateStarted": "Mar 11, 2017 4:26:25 PM",
+      "dateFinished": "Mar 11, 2017 4:26:25 PM",
+      "status": "ERROR",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "text": "",
+      "user": "anonymous",
+      "dateUpdated": "Mar 11, 2017 4:26:24 PM",
+      "config": {
+        "colWidth": 12.0,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "scala"
+        },
+        "editorMode": "ace/mode/scala"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "jobName": "paragraph_1489017119231_1178110828",
+      "id": "20170308-165159_390453220",
+      "dateCreated": "Mar 8, 2017 4:51:59 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    }
+  ],
+  "name": "WTF/Spark ML Hackday Project",
+  "id": "2CBEJDES5",
+  "angularObjects": {
+    "2CD63QYF2:shared_process": [],
+    "2CBK85NF7:shared_process": [],
+    "2CC9AFYDS:shared_process": [],
+    "2CB3DKR55:shared_process": [],
+    "2CB8AA9VR:shared_process": [],
+    "2CBNMU8WA:shared_process": [],
+    "2CCA7WXMG:shared_process": [],
+    "2CAYANSYX:shared_process": [],
+    "2C9Z4FXPV:shared_process": [],
+    "2CD9RVBHD:shared_process": [],
+    "2CARS5MSU:shared_process": [],
+    "2C9V3RC21:shared_process": [],
+    "2CC3VW6HE:shared_process": [],
+    "2CDCF98VE:shared_process": [],
+    "2CAT5DVJT:shared_process": [],
+    "2CCUME3J5:shared_process": [],
+    "2CA7FW56R:shared_process": [],
+    "2CDGCAUK4:shared_process": [],
+    "2CD8SS25D:shared_process": []
+  },
+  "config": {
+    "looknfeel": "default",
+    "personalizedMode": "false"
+  },
+  "info": {}
+}
