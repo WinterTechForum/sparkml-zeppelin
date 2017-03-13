@@ -9,8 +9,8 @@ Spark ML Zeppelin
 
   2. Download nltk data
 
-   ```>>> import nltk
-   >>> nltk.download()```
+    >>> import nltk
+    >>> nltk.download()
    (http://www.nltk.org/data.html)
 
 3. Download and install Zeppelin 0.7.0:
@@ -25,8 +25,8 @@ Spark ML Zeppelin
 
 5. Configure Zeppelin to use this project's `notebook` directory:
 
-  1. Open the notebook repos page (http://localhost:8080/#/notebookRepos).
+  1. Open the notebook repos page: http://localhost:8080/#/notebookRepos
 
   2. Change the "Notebook Path" to `.../sparkml-zeppelin/notebook`
 
-6. Load the Zeppelin note (http://localhost:8080/#/notebook/2CBEJDES5) 
+6. Load the Zeppelin note: http://localhost:8080/#/notebook/2CBEJDES5 
