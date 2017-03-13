@@ -12,7 +12,7 @@ Spark ML Zeppelin
            import nltk
            nltk.download()
 
-           (http://www.nltk.org/data.html)
+       (Details: http://www.nltk.org/data.html)
 
 3. Download and install Zeppelin 0.7.0:
 
